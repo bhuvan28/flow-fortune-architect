@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { AddDealForm } from "@/components/forms/AddDealForm";
 import { 
   DollarSign, 
   Calendar, 
@@ -9,10 +10,26 @@ import {
   Building, 
   TrendingUp,
   Plus,
-  MoreHorizontal
+  MoreHorizontal,
+  Edit,
+  Trash2
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { useState } from 'react';
+import { useToast } from "@/hooks/use-toast";
+
+interface Deal {
+  id: string;
+  title: string;
+  company: string;
+  value: number;
+  probability: number;
+  closeDate: string;
+  contact: string;
+  stage?: string;
+  description?: string;
+  notes?: string;
+}
 
 const initialPipelineData = {
   'qualified': {
@@ -27,7 +44,9 @@ const initialPipelineData = {
         value: 85000,
         probability: 40,
         closeDate: '2024-02-15',
-        contact: 'Sarah Johnson'
+        contact: 'Sarah Johnson',
+        description: 'Large enterprise looking for comprehensive software solution',
+        notes: 'Decision maker identified, budget confirmed'
       },
       {
         id: '2',
@@ -36,7 +55,20 @@ const initialPipelineData = {
         value: 120000,
         probability: 35,
         closeDate: '2024-03-01',
-        contact: 'Michael Chen'
+        contact: 'Michael Chen',
+        description: 'Full cloud migration and infrastructure setup',
+        notes: 'Multiple stakeholders involved, technical evaluation in progress'
+      },
+      {
+        id: '3',
+        title: 'Digital Transformation',
+        company: 'Manufacturing Pro',
+        value: 95000,
+        probability: 45,
+        closeDate: '2024-02-20',
+        contact: 'Robert Thompson',
+        description: 'Modernizing legacy systems and processes',
+        notes: 'Strong interest, waiting for board approval'
       }
     ]
   },
@@ -46,22 +78,37 @@ const initialPipelineData = {
     color: 'bg-crm-purple',
     deals: [
       {
-        id: '3',
+        id: '4',
         title: 'CRM Implementation',
         company: 'StartupXYZ',
         value: 45000,
         probability: 60,
         closeDate: '2024-01-30',
-        contact: 'Emily Rodriguez'
+        contact: 'Emily Rodriguez',
+        description: 'Complete CRM setup and team training',
+        notes: 'Proposal submitted, positive feedback received'
       },
       {
-        id: '4',
+        id: '5',
         title: 'Data Analytics Platform',
         company: 'Innovation Labs',
         value: 95000,
         probability: 65,
         closeDate: '2024-02-10',
-        contact: 'David Park'
+        contact: 'David Park',
+        description: 'Advanced analytics and reporting solution',
+        notes: 'Demo completed successfully, negotiating terms'
+      },
+      {
+        id: '6',
+        title: 'E-commerce Platform',
+        company: 'Retail Solutions',
+        value: 75000,
+        probability: 55,
+        closeDate: '2024-02-25',
+        contact: 'Jessica Brown',
+        description: 'Custom e-commerce platform development',
+        notes: 'Proposal under review, awaiting feedback'
       }
     ]
   },
@@ -71,13 +118,26 @@ const initialPipelineData = {
     color: 'bg-crm-orange',
     deals: [
       {
-        id: '5',
+        id: '7',
         title: 'Security Audit Service',
         company: 'FinTech Solutions',
         value: 32000,
         probability: 80,
         closeDate: '2024-01-25',
-        contact: 'Lisa Wang'
+        contact: 'Lisa Wang',
+        description: 'Comprehensive security assessment and remediation',
+        notes: 'Price negotiation in progress, timeline agreed'
+      },
+      {
+        id: '8',
+        title: 'Mobile App Development',
+        company: 'Health Solutions',
+        value: 65000,
+        probability: 75,
+        closeDate: '2024-02-05',
+        contact: 'Dr. Martinez',
+        description: 'Patient management mobile application',
+        notes: 'Contract terms being finalized'
       }
     ]
   },
@@ -87,13 +147,26 @@ const initialPipelineData = {
     color: 'bg-crm-green',
     deals: [
       {
-        id: '6',
+        id: '9',
         title: 'Website Redesign',
         company: 'Creative Agency',
         value: 28000,
         probability: 100,
         closeDate: '2024-01-15',
-        contact: 'James Miller'
+        contact: 'James Miller',
+        description: 'Complete website redesign and optimization',
+        notes: 'Project completed successfully, client very satisfied'
+      },
+      {
+        id: '10',
+        title: 'Process Automation',
+        company: 'LogisticsPro',
+        value: 55000,
+        probability: 100,
+        closeDate: '2024-01-10',
+        contact: 'Mark Johnson',
+        description: 'Automated workflow and inventory management',
+        notes: 'Closed deal, implementation started'
       }
     ]
   }
@@ -101,6 +174,8 @@ const initialPipelineData = {
 
 export function SalesPipeline() {
   const [pipelineData, setPipelineData] = useState(initialPipelineData);
+  const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
+  const { toast } = useToast();
 
   const onDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -154,10 +229,28 @@ export function SalesPipeline() {
           <h1 className="text-2xl font-bold text-foreground">Sales Pipeline</h1>
           <p className="text-muted-foreground">Manage deals through your sales process</p>
         </div>
-        <Button className="bg-gradient-primary hover:bg-primary-hover">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Deal
-        </Button>
+        <AddDealForm 
+          onDealAdded={(deal) => {
+            const newDeal = {
+              id: Date.now().toString(),
+              title: deal.title,
+              company: deal.company,
+              value: deal.value,
+              probability: deal.probability,
+              closeDate: deal.closeDate,
+              contact: deal.contact,
+              description: deal.description || '',
+              notes: deal.notes || ''
+            };
+            setPipelineData(prev => ({
+              ...prev,
+              qualified: {
+                ...prev.qualified,
+                deals: [...prev.qualified.deals, newDeal]
+              }
+            }));
+          }}
+        />
       </div>
 
       {/* Pipeline Stats */}

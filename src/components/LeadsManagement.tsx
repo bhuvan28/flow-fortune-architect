@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AddLeadForm } from "@/components/forms/AddLeadForm";
 import { 
   Search, 
   Filter, 
@@ -13,9 +14,26 @@ import {
   Star,
   Eye,
   Edit,
-  MoreHorizontal
+  MoreHorizontal,
+  Trash2
 } from "lucide-react";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Lead {
+  id: number;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  location: string;
+  status: string;
+  score: number;
+  source: string;
+  value: string;
+  lastContact: string;
+  notes?: string;
+}
 
 const leadStatuses = {
   'new': { label: 'New', color: 'bg-crm-blue text-white' },
@@ -25,7 +43,7 @@ const leadStatuses = {
   'converted': { label: 'Converted', color: 'bg-crm-green text-white' }
 };
 
-const leadsData = [
+const initialLeadsData: Lead[] = [
   {
     id: 1,
     name: 'Sarah Johnson',
@@ -37,7 +55,8 @@ const leadsData = [
     score: 85,
     source: 'Website',
     value: '$45,000',
-    lastContact: '2 hours ago'
+    lastContact: '2 hours ago',
+    notes: 'Interested in enterprise package. Follow up next week.'
   },
   {
     id: 2,
@@ -50,7 +69,8 @@ const leadsData = [
     score: 70,
     source: 'LinkedIn',
     value: '$78,000',
-    lastContact: '1 day ago'
+    lastContact: '1 day ago',
+    notes: 'CEO of mid-size company, looking for automation solutions.'
   },
   {
     id: 3,
@@ -63,7 +83,8 @@ const leadsData = [
     score: 92,
     source: 'Referral',
     value: '$32,000',
-    lastContact: '3 hours ago'
+    lastContact: '3 hours ago',
+    notes: 'Referred by John Smith. Very interested, schedule demo.'
   },
   {
     id: 4,
@@ -76,20 +97,110 @@ const leadsData = [
     score: 95,
     source: 'Cold Call',
     value: '$120,000',
-    lastContact: '1 week ago'
+    lastContact: '1 week ago',
+    notes: 'Deal closed successfully. Great customer for case study.'
+  },
+  {
+    id: 5,
+    name: 'Lisa Wang',
+    company: 'Creative Agency Plus',
+    email: 'lisa.wang@creativeplus.com',
+    phone: '+1 (555) 789-0123',
+    location: 'Los Angeles, CA',
+    status: 'qualified',
+    score: 88,
+    source: 'Event',
+    value: '$65,000',
+    lastContact: '4 hours ago',
+    notes: 'Met at tech conference. Needs solution for creative workflow.'
+  },
+  {
+    id: 6,
+    name: 'Robert Thompson',
+    company: 'Manufacturing Pro',
+    email: 'robert@manufacturingpro.com',
+    phone: '+1 (555) 234-5678',
+    location: 'Chicago, IL',
+    status: 'contacted',
+    score: 75,
+    source: 'Website',
+    value: '$90,000',
+    lastContact: '6 hours ago',
+    notes: 'Large manufacturing company. Interested in inventory management.'
+  },
+  {
+    id: 7,
+    name: 'Jennifer Martinez',
+    company: 'Health Solutions Inc',
+    email: 'j.martinez@healthsolutions.com',
+    phone: '+1 (555) 345-6789',
+    location: 'Miami, FL',
+    status: 'new',
+    score: 82,
+    source: 'Referral',
+    value: '$55,000',
+    lastContact: '1 day ago',
+    notes: 'Healthcare sector lead. Compliance requirements important.'
+  },
+  {
+    id: 8,
+    name: 'Alex Kumar',
+    company: 'StartupXYZ',
+    email: 'alex@startupxyz.io',
+    phone: '+1 (555) 456-7890',
+    location: 'Boston, MA',
+    status: 'unqualified',
+    score: 45,
+    source: 'LinkedIn',
+    value: '$15,000',
+    lastContact: '3 days ago',
+    notes: 'Small budget, not a good fit for current solutions.'
   }
 ];
 
 export function LeadsManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [leads, setLeads] = useState<Lead[]>(initialLeadsData);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const { toast } = useToast();
 
-  const filteredLeads = leadsData.filter(lead => {
+  const filteredLeads = leads.filter(lead => {
     const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          lead.company.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const handleAddLead = (newLead: any) => {
+    setLeads(prev => [...prev, { ...newLead, id: Date.now(), lastContact: 'Just now' }]);
+  };
+
+  const handleUpdateLead = (updatedLead: any) => {
+    setLeads(prev => prev.map(lead => 
+      lead.id === updatedLead.id ? { ...updatedLead, lastContact: 'Just updated' } : lead
+    ));
+    setEditingLead(null);
+  };
+
+  const handleDeleteLead = (leadId: number) => {
+    setLeads(prev => prev.filter(lead => lead.id !== leadId));
+    toast({
+      title: "Lead Deleted",
+      description: "The lead has been removed successfully.",
+    });
+  };
+
+  const getLeadStats = () => {
+    const total = leads.length;
+    const qualified = leads.filter(l => l.status === 'qualified').length;
+    const inProgress = leads.filter(l => ['contacted', 'new'].includes(l.status)).length;
+    const avgScore = Math.round(leads.reduce((sum, l) => sum + l.score, 0) / total);
+    
+    return { total, qualified, inProgress, avgScore };
+  };
+
+  const stats = getLeadStats();
 
   return (
     <div className="p-6 space-y-6">
@@ -99,10 +210,11 @@ export function LeadsManagement() {
           <h1 className="text-2xl font-bold text-foreground">Leads Management</h1>
           <p className="text-muted-foreground">Manage and track your sales leads</p>
         </div>
-        <Button className="bg-gradient-primary hover:bg-primary-hover">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Lead
-        </Button>
+        <AddLeadForm 
+          onLeadAdded={handleAddLead}
+          editLead={editingLead}
+          onLeadUpdated={handleUpdateLead}
+        />
       </div>
 
       {/* Filters */}
@@ -202,12 +314,21 @@ export function LeadsManagement() {
                   <Eye className="w-4 h-4 mr-1" />
                   View
                 </Button>
-                <Button size="sm" variant="outline" className="flex-1">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setEditingLead(lead)}
+                >
                   <Edit className="w-4 h-4 mr-1" />
                   Edit
                 </Button>
-                <Button size="sm" variant="outline">
-                  <MoreHorizontal className="w-4 h-4" />
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleDeleteLead(lead.id)}
+                >
+                  <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
             </CardContent>
@@ -219,25 +340,25 @@ export function LeadsManagement() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="text-center shadow-crm-sm">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-crm-blue">156</div>
+            <div className="text-2xl font-bold text-crm-blue">{stats.total}</div>
             <div className="text-sm text-muted-foreground">Total Leads</div>
           </CardContent>
         </Card>
         <Card className="text-center shadow-crm-sm">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-crm-green">42</div>
+            <div className="text-2xl font-bold text-crm-green">{stats.qualified}</div>
             <div className="text-sm text-muted-foreground">Qualified</div>
           </CardContent>
         </Card>
         <Card className="text-center shadow-crm-sm">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-crm-orange">28</div>
+            <div className="text-2xl font-bold text-crm-orange">{stats.inProgress}</div>
             <div className="text-sm text-muted-foreground">In Progress</div>
           </CardContent>
         </Card>
         <Card className="text-center shadow-crm-sm">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-crm-purple">86</div>
+            <div className="text-2xl font-bold text-crm-purple">{stats.avgScore}</div>
             <div className="text-sm text-muted-foreground">Avg. Score</div>
           </CardContent>
         </Card>
